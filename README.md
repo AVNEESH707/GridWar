@@ -1,127 +1,159 @@
 # GridWar 🗺️
 
-A real-time shared grid where anyone who opens the site can claim tiles — and everyone sees it happen instantly.
+A real-time multiplayer territory-capture game where players compete to claim tiles on a shared grid. Every action is synchronized instantly across all connected users using WebSockets.
+
+## Live Demo
+
+**Frontend:** https://grid-war-beta.vercel.app
+
+**Backend API:** https://gridwar-iprl.onrender.com
 
 ---
 
-## Quick Start
+## Features
 
-```bash
-# 1. Install dependencies
-npm install
+* Real-time tile claiming using WebSockets
+* 40×30 grid (1,200 claimable tiles)
+* Live leaderboard
+* Activity feed with ownership updates
+* Active player count
+* Optimistic UI updates
+* Automatic WebSocket reconnection
+* Server-side cooldown protection
+* Conflict-safe claim processing
+* REST API fallback support
 
-# 2. Start the server
-npm start
-# → http://localhost:3000
+---
 
-# For development with auto-reload:
-npm run dev
-```
+## Tech Stack
 
-Open `http://localhost:3000` in multiple browser tabs to test multi-user behaviour.
+| Layer                   | Technology                    |
+| ----------------------- | ----------------------------- |
+| Frontend                | HTML, CSS, Vanilla JavaScript |
+| Backend                 | Node.js, Express              |
+| Real-time Communication | WebSocket (`ws`)              |
+| Deployment              | Vercel + Render               |
+| State Management        | In-memory object store        |
 
 ---
 
 ## Project Structure
 
-```
+```text
 gridwar/
 ├── frontend/
-│   ├── index.html     # UI shell
-│   ├── style.css      # Dark-mode grid styles
-│   └── app.js         # WebSocket client + grid logic
+│   ├── index.html
+│   ├── style.css
+│   └── app.js
 ├── backend/
-│   └── server.js      # Express + WebSocket server
+│   └── server.js
 ├── package.json
 └── README.md
 ```
 
 ---
 
+## Local Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Start server
+npm start
+
+# Development mode
+npm run dev
+```
+
+Open:
+
+http://localhost:3000
+
+in multiple browser tabs to simulate multiple players.
+
+---
+
 ## Architecture
 
-### Real-time Layer — WebSocket (ws library)
+### Real-Time Synchronization
 
-Every browser connects via a persistent WebSocket. When a player claims a tile:
+Each client establishes a persistent WebSocket connection with the server.
 
-1. The client sends a `claim` message over WebSocket
-2. The server validates it (cooldown, bounds check, ownership)
-3. If valid, the server updates its in-memory grid and **broadcasts a `cell_update` diff to every connected client**
-4. Each client applies the diff instantly — no polling, no full reload
+Claim flow:
 
-Diffs are tiny (one cell at a time), keeping bandwidth minimal even with hundreds of players.
+1. Player clicks a tile
+2. Client sends a `claim` event
+3. Server validates ownership and cooldown
+4. Server updates grid state
+5. Server broadcasts a `cell_update` message
+6. All connected clients update instantly
+
+This diff-based approach minimizes bandwidth usage and keeps updates extremely fast.
 
 ### Conflict Resolution
 
-- The **server is the single source of truth** — it arbitrates all claims
-- Clients do an **optimistic update** (paint the cell immediately) for snappy UX
-- If the server rejects the claim (e.g. someone else got there first during the same millisecond), it sends back an `error` message and the client re-syncs
-- Cooldown is enforced **server-side** to prevent abuse, not just in the UI
+The server acts as the single source of truth.
+
+* Optimistic client updates for responsiveness
+* Server-side validation
+* Automatic rollback on rejected claims
+* Cooldown enforcement to prevent spam
 
 ### REST Fallback
 
-If WebSocket is unavailable, `POST /api/claim` handles claims via HTTP. The server's `processClaim()` function is shared between both paths.
-
-### State Management
-
-| Layer | Storage | Notes |
-|---|---|---|
-| Runtime | In-memory JS object | O(1) reads/writes, zero latency |
-| Persistence (optional) | Redis | Survives server restarts; see comments in `server.js` |
-
-The grid is a flat `{ [cellIndex]: { id, name, color, ts } }` object. With 40×30 = 1,200 cells and ~100 bytes per owned cell, the full grid is < 120 KB.
+If WebSocket communication is unavailable, tile claims are processed through REST endpoints.
 
 ---
 
-## WebSocket Message Protocol
+## WebSocket Protocol
 
 ### Client → Server
-| Message | Fields | Description |
-|---|---|---|
-| `hello` | `id, name, color` | Register on connect; server replies with full state |
-| `claim` | `idx, id, name, color` | Claim cell at index `idx` |
+
+| Message | Purpose         |
+| ------- | --------------- |
+| hello   | Register player |
+| claim   | Claim a tile    |
 
 ### Server → Client
-| Message | Fields | Description |
-|---|---|---|
-| `full_state` | `grid, playerCount` | Sent once on connect |
-| `cell_update` | `idx, info` | Broadcast on every successful claim |
-| `player_count` | `count` | Broadcast when players join/leave |
-| `error` | `message` | Sent to requester when claim is rejected |
+
+| Message      | Purpose               |
+| ------------ | --------------------- |
+| full_state   | Send current grid     |
+| cell_update  | Broadcast tile update |
+| player_count | Active player count   |
+| error        | Claim rejection       |
 
 ---
 
-## Features
+## Scaling Considerations
 
-- **40×30 grid** — 1,200 claimable tiles
-- **Real-time sync** — all clients see updates via WebSocket broadcast
-- **Cooldown system** — 800ms server-side cooldown per player (prevents spamming)
-- **Conflict-safe** — server arbitrates simultaneous claims
-- **Optimistic UI** — instant local feedback, rolls back on rejection
-- **Live leaderboard** — top 10 players by tiles owned
-- **Activity log** — shows recent claims/takeovers
-- **Player count** — live active player count
-- **Reconnect logic** — auto-reconnects if WebSocket drops
+For larger deployments:
+
+* Redis Pub/Sub for multi-instance synchronization
+* Redis persistence for server recovery
+* Rate limiting on public endpoints
+* Horizontal scaling with load balancing
+* Distributed cell-locking mechanisms
 
 ---
 
-## Scaling Notes
+## Deployment
 
-For production with many concurrent users:
+Frontend deployed on Vercel.
 
-- **Redis pub/sub** — replace in-memory broadcast with Redis channels so multiple server instances stay in sync
-- **Sticky sessions** or Redis-backed session storage for player state
-- **Rate limiting** — add `express-rate-limit` on the REST endpoint
-- **Cell locking** — use Redis `SET NX` (atomic set-if-not-exists) for stricter conflict resolution under high contention
+Backend deployed on Render.
+
+The application supports real-time communication over secure WebSockets (WSS) in production.
 
 ---
 
-## Tech Stack
+## Future Improvements
 
-| Concern | Choice | Reason |
-|---|---|---|
-| Server | Node.js + Express | Async I/O fits high-concurrency WebSocket workload |
-| Real-time | `ws` library | Lightweight, battle-tested, no protocol overhead |
-| Frontend | Vanilla JS | No build step; direct DOM for grid performance |
-| State | In-memory object | Zero-latency; Redis hook provided for persistence |
-| Styling | Custom CSS | Full control over grid cell animations + dark theme |
+* User authentication
+* Persistent player profiles
+* Tile history tracking
+* Global chat system
+* Team-based territory wars
+* Database persistence
+* Mobile-first UI enhancements
