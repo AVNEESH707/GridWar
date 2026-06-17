@@ -125,7 +125,7 @@ function handleClaim(idx) {
     ws.send(JSON.stringify({ type: 'claim', idx, id: myId, name: myName, color: myColor }));
   } else {
     // Fallback: REST claim
-    fetch('/api/claim', {
+    fetch('https://gridwar-iprl.onrender.com/api/claim', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idx, id: myId, name: myName, color: myColor }),
@@ -151,7 +151,7 @@ function animateCell(idx) {
 // ── WebSocket ─────────────────────────────────────────────────────────────────
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}`);
+ ws = new WebSocket('wss://gridwar-iprl.onrender.com');
 
   ws.onopen = () => {
     console.log('[WS] connected');
@@ -216,7 +216,7 @@ function handleServerMessage(msg) {
 
 // ── REST Fallback ─────────────────────────────────────────────────────────────
 function fetchFullState() {
-  fetch('/api/grid')
+  fetch('https://gridwar-iprl.onrender.com/api/grid')
     .then(r => r.json())
     .then(data => {
       gridData = data.grid;
