@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GridWar</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div id="logo">Grid<span>War</span></div>
+    <div id="stats-bar">
+      <div class="stat">Grid: <strong>40×30</strong></div>
+      <div class="stat">Claimed: <strong id="stat-claimed">0</strong></div>
+      <div class="stat">Free: <strong id="stat-free">1200</strong></div>
+      <div class="stat">Players: <strong id="stat-players">1</strong></div>
+    </div>
+    <div id="user-section">
+      <div id="user-dot"></div>
+      <div id="username-display">...</div>
+      <button id="change-btn" onclick="showModal()">Change name</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="grid-container">
+      <div id="grid"></div>
+    </div>
+
+    <div id="sidebar">
+      <div id="sidebar-title">Leaderboard</div>
+      <div id="leaderboard"></div>
+      <div id="activity-log">
+        <div id="log-title">Activity</div>
+        <div id="activity"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Join Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h2>GridWar</h2>
+    <p>Choose a name to start claiming territory</p>
+    <input id="name-input" type="text" maxlength="18" placeholder="Enter your name..." />
+    <button onclick="submitName()">Join the battle</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
